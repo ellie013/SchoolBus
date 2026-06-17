@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>校車點名系統</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 16px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      background-attachment: fixed;
+      color: #f8fafc;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* === Header === */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { font-size: 1.8rem; filter: drop-shadow(0 2px 8px rgba(245,158,11,0.4)); }
+    .logo h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #fff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logo small {
+      font-size: 0.65rem;
+      color: #f59e0b;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      display: block;
+      margin-top: -2px;
+    }
+
+    #dateSelector {
+      font-size: 15px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(15,23,42,0.7);
+      color: #f8fafc;
+      font-family: 'Noto Sans TC', sans-serif;
+      outline: none;
+      cursor: pointer;
+    }
+    #dateSelector:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.25); }
+
+    /* === Container === */
+    .container { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+    /* === Date Title === */
+    #dateTitle {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #94a3b8;
+      margin: 12px 0 8px;
+    }
+
+    /* === Section Headers === */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px 0 12px;
+      padding: 0 4px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .section-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .absence-count {
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(244,63,94,0.15);
+      color: #f43f5e;
+      border: 1px solid rgba(244,63,94,0.3);
+    }
+
+    /* === Table === */
+    .table-wrap {
+      background: rgba(30,41,59,0.7);
+      border: 1px solid rgba(255,255,255,0.06);
+      backdrop-filter: blur(10px);
+      border-radius: 14px;
+      overflow-x: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; table-layout: fixed; }
+    th, td { border-bottom: 1px solid rgba(255,255,255,0.04); padding: 12px 14px; text-align: center; vertical-align: middle; }
+    th {
+      background: rgba(15,23,42,0.5);
+      color: #94a3b8;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    th:nth-child(1) { width: 14%; }
+    th:nth-child(2) { width: 18%; }
+    th:nth-child(3) { width: 10%; }
+    th:nth-child(4) { width: 16%; }
+    th:nth-child(5) { width: 10%; }
+    th:nth-child(6) { width: 20%; }
+    th:nth-child(7) { width: 12%; }
+
+    /* === Checkbox-label (attendance toggle) === */
+    .checkbox-label {
+      cursor: pointer;
+      font-size: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      user-select: none;
+    }
+    .checkbox-label.checked {
+      background: rgba(16,185,129,0.15);
+      border: 2px solid #10b981;
+      box-shadow: 0 0 8px rgba(16,185,129,0.2);
+    }
+    .checkbox-label.unchecked {
+      background: rgba(244,63,94,0.12);
+      border: 2px solid #f43f5e;
+      box-shadow: 0 0 8px rgba(244,63,94,0.15);
+    }
+    .checkbox-label:hover { transform: scale(1.08); }
+    .checkbox-label:active { transform: scale(0.95); }
+
+    /* === Leave checkbox (toggle switch) === */
+    .leave-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+    .leave-switch input { opacity: 0; width: 0; height: 0; }
+    .leave-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.1);
+      border-radius: 34px;
+      border: 1px solid rgba(255,255,255,0.05);
+      transition: 0.35s;
+    }
+    .leave-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: #94a3b8;
+      border-radius: 50%;
+      transition: 0.35s;
+    }
+    .leave-switch input:checked + .leave-slider {
+      background: #a78bfa;
+      box-shadow: 0 0 10px rgba(139,92,246,0.4);
+    }
+    .leave-switch input:checked + .leave-slider:before {
+      transform: translateX(24px);
+      background: #0f172a;
+    }
+
+    /* === Note input === */
+    .note-input {
+      font-size: 13px;
+      padding: 6px 10px;
+      width: 95%;
+      box-sizing: border-box;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #f8fafc;
+      border-radius: 8px;
+      font-family: 'Noto Sans TC', sans-serif;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .note-input:focus { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
+    .note-input.leave-note { color: #a78bfa; background: rgba(139,92,246,0.08); border-color: rgba(139,92,246,0.3); }
+
+    /* === Row states === */
+    tr.row-leave { opacity: 0.6; }
+    tr.row-leave td { background: rgba(139,92,246,0.03); }
+
+    /* === Copy button === */
+    .copy-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: 'Noto Sans TC', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+      margin: 14px 0;
+    }
+    .copy-btn:hover { transform: translateY(-2px); }
+    .copy-btn:active { transform: translateY(0); }
+    .morning-btn {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+    }
+    .afternoon-btn {
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      color: #0f172a;
+      box-shadow: 0 4px 14px rgba(245,158,11,0.35);
+    }
+    .allpresent-btn {
+      background: rgba(16,185,129,0.15);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: #10b981;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+    }
+    .allpresent-btn:hover { background: #10b981; color: #fff; }
+
+    /* === Tabs (History) === */
+    .tabs-nav {
+      display: flex;
+      gap: 6px;
+      background: rgba(15,23,42,0.8);
+      padding: 5px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+      margin: 16px 0;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+      text-align: center;
+      font-family: 'Noto Sans TC', sans-serif;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .tab-btn:hover { color: #f8fafc; background: rgba(255,255,255,0.05); }
+    .tab-btn.active { color: #0f172a; background: #f59e0b; box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+
+    .tab-content { display: none; animation: fadeUp 0.35s ease-out; }
+    .tab-content.active { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === History cards === */
+    .history-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .history-card {
+      background: rgba(30,41,59,0.7);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .history-card:hover { transform: translateY(-3px); border-color: #f59e0b; box-shadow: 0 10px 24px rgba(0,0,0,0.4); }
+    .history-card::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:#f59e0b; }
+    .history-card .hc-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .hc-badge.morning { background: rgba(59,130,246,0.2); color: #93c5fd; }
+    .hc-badge.afternoon { background: rgba(245,158,11,0.2); color: #fde047; }
+    .history-card .hc-bus { font-weight: 600; color: #f59e0b; margin: 6px 0; font-size: 0.9rem; }
+    .history-card .hc-stats { font-size: 0.85rem; color: #94a3b8; line-height: 1.8; }
+    .hc-stats .green { color: #10b981; font-weight: 600; }
+    .hc-stats .red { color: #f43f5e; font-weight: 600; }
+    .hc-stats .purple { color: #a78bfa; font-weight: 600; }
+
+    .history-date-group {
+      margin-bottom: 28px;
+    }
+    .history-date-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f8fafc;
+      background: rgba(245, 158, 11, 0.12);
+      border-left: 4px solid #f59e0b;
+      padding: 8px 16px;
+      border-radius: 6px;
+      margin-top: 24px;
+      margin-bottom: 14px;
+      display: inline-block;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* === Toast === */
+    .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    .toast {
+      background: rgba(30,41,59,0.95);
+      border-left: 4px solid #f59e0b;
+      color: #f8fafc;
+      padding: 14px 22px;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 240px;
+      transform: translateX(120%);
+      animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards;
+      font-size: 0.9rem;
+    }
+    .toast.success { border-left-color: #10b981; }
+    .toast.error { border-left-color: #f43f5e; }
+    @keyframes slideIn { to { transform: translateX(0); } }
+    .toast.fade-out { animation: slideOut 0.3s forwards; }
+    @keyframes slideOut { to { transform: translateX(120%); opacity: 0; } }
+
+    /* === Empty state === */
+    .empty-state { text-align: center; padding: 50px 20px; color: #64748b; }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 10px; opacity: 0.5; }
+
+    /* === Loading spinner === */
+    .loading-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+      flex-direction: column;
+      gap: 14px;
+      color: #94a3b8;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 4px solid rgba(255,255,255,0.1);
+      border-top-color: #f59e0b;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* === Mobile === */
+    @media (max-width: 640px) {
+      header { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .header-controls { width: 100%; display: flex; gap: 8px; }
+      #dateSelector { flex: 1; font-size: 17px; padding: 10px 14px; }
+      .settings-btn { padding: 10px 14px; font-size: 0.95rem; }
+      
+      table { font-size: 15px; }
+      table strong { font-size: 18px; } 
+      
+      th, td { padding: 12px 8px; }
+      
+      .checkbox-label { width: 46px; height: 46px; font-size: 22px; border-radius: 12px; }
+      
+      .leave-switch { width: 52px; height: 26px; }
+      .leave-slider:before { width: 18px; height: 18px; left: 3px; bottom: 3px; }
+      .leave-switch input:checked + .leave-slider:before { transform: translateX(26px); }
+      
+      .note-input { font-size: 14px; padding: 6px 8px; width: 100%; }
+      
+      .copy-btn { width: 100%; font-size: 1.05rem; padding: 14px 20px; }
+      .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .tabs-nav { overflow-x: auto; }
+      .tab-btn { font-size: 1.05rem; padding: 12px 18px; }
+
+      th:nth-child(1) { width: 70px; }  
+      th:nth-child(2) { width: 130px; } 
+      th:nth-child(3) { width: 80px; }  
+      th:nth-child(4) { width: 130px; } 
+      th:nth-child(5) { width: 70px; }  
+      th:nth-child(6) { width: 150px; } 
+      th:nth-child(7) { width: 85px; }  
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15,23,42,0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+    .hc-hint {
+      font-size: 0.75rem;
+      color: #f59e0b;
+      margin-top: 10px;
+      text-align: right;
+      opacity: 0.8;
+    }
+    .history-card { cursor: pointer; }
+
+    /* === History Detail Modal & Settings Modal === */
+    .hm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(6px);
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .hm-box {
+      background: #1e293b;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+      animation: fadeUp 0.25s ease-out;
+    }
+    .hm-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      position: sticky;
+      top: 0;
+      background: #1e293b;
+      border-radius: 18px 18px 0 0;
+    }
+    .hm-title { font-size: 1.1rem; font-weight: 700; }
+    .hm-bus {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 0.85rem;
+      color: #f59e0b;
+      font-weight: 600;
+    }
+    .hm-close {
+      background: rgba(255,255,255,0.07);
+      border: none;
+      color: #94a3b8;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .hm-close:hover { background: rgba(255,255,255,0.15); color: #f8fafc; }
+    .hm-section { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .hm-section:last-child { border-bottom: none; }
+    .hm-section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .green-title  { color: #10b981; }
+    .red-title    { color: #f43f5e; }
+    .purple-title { color: #a78bfa; }
+
+    .hm-item {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      line-height: 1.5;
+    }
+    .item-present { background: rgba(16,185,129,0.08); color: #d1fae5; }
+    .item-absent  { background: rgba(244,63,94,0.08);  color: #ffe4e6; }
+    .item-leave   { background: rgba(139,92,246,0.08); color: #ede9fe; }
+    .hm-note {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      font-style: italic;
+      margin-left: 4px;
+    }
+    .hm-empty { font-size: 0.9rem; color: #64748b; padding: 4px 12px; }
+
+    .settings-input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 0.95rem;
+      margin-top: 10px;
+      margin-bottom: 16px;
+      outline: none;
+      font-family: inherit;
+    }
+    .settings-input:focus {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.2);
+    }
+
+    @media (max-width: 640px) {
+      .hm-box { max-height: 90vh; border-radius: 14px 14px 0 0; }
+      .hm-overlay { align-items: flex-end; padding: 0; }
+      .hm-item { font-size: 1.1rem; padding: 10px 12px; }
+      .hm-section-title { font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span class="logo-icon">🚌</span>
+      <div>
+        <h1>校車點名系統</h1>
+        <small>School Bus Roll Call</small>
+      </div>
+    </div>
+    <div class="header-controls">
+      <select id="dateSelector" onchange="displaySelectedDate()"></select>
+      <button class="copy-btn allpresent-btn settings-btn" onclick="openSettings()" style="margin:0; padding:8px 14px; border-radius:10px; font-weight:600;">⚙️ 設定 API</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="dateTitle"></div>
+
+    <!-- 分頁導覽 -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-rollcall" onclick="switchTab('tab-rollcall')">📝 每日點名</button>
+      <button class="tab-btn" data-tab="tab-history" onclick="switchTab('tab-history')">📊 歷史紀錄</button>
+    </div>
+
+    <!-- ===== 點名分頁 ===== -->
+    <div id="tab-rollcall" class="tab-content active">
+
+      <!-- 上午 -->
+      <div class="section-header">
+        <h2>☀️ 上午點名</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span id="morningAbsenceCount" class="absence-count"></span>
+          <button class="copy-btn allpresent-btn" onclick="markAllPresent('上午')">✨ 一鍵全到</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="morningTable"></table>
+      </div>
+      <button class="copy-btn morning-btn" onclick="copyAbsences('上午')">📋 複製上午未搭車名單</button>
+
+      <!-- 下午 -->
+      <div class="section-header">
+        <h2>🎒 下午點名</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <span id="afternoonAbsenceCount" class="absence-count"></span>
+          <button class="copy-btn allpresent-btn" onclick="markAllPresent('下午')">✨ 一鍵全到</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="afternoonTable"></table>
+      </div>
+      <button class="copy-btn afternoon-btn" onclick="copyAbsences('下午')">📋 複製下午未搭車名單</button>
+
+    </div>
+
+    <!-- ===== 歷史紀錄分頁 ===== -->
+    <div id="tab-history" class="tab-content">
+      <div id="historyContainer">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div>點擊此分頁即可載入歷史紀錄</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 設定 API Modal -->
+  <div id="settingsModal" class="hm-overlay" style="display:none;">
+    <div class="hm-box" style="max-width:480px;">
+      <div class="hm-header">
+        <span class="hm-title">⚙️ API 網址設定</span>
+        <button class="hm-close" onclick="closeSettings()">✕</button>
+      </div>
+      <div style="padding: 16px 20px;">
+        <p style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 4px; line-height: 1.5;">
+          請貼入您在 Google Apps Script 中發布的「網頁應用程式網址」：
+        </p>
+        <input type="text" id="apiUrlInput" class="settings-input" placeholder="https://script.google.com/macros/s/.../exec">
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="copy-btn allpresent-btn" onclick="saveSettings()" style="margin:0; padding:10px 20px;">儲存設定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- JavaScript 邏輯 -->
+  <script>
+    // ========== 全域狀態 ==========
+    var fullDataStore = {};
+    var localData = {};
+    var modifiedCheck = {};
+    var autoRefreshTimer = null;
+
+    // ========== API 網址讀取 ==========
+    function getApiUrl() {
+      return localStorage.getItem('school_bus_api_url') || '';
+    }
+
+    // ========== 初始化載入 ==========
+    function loadInitialData() {
+      var apiUrl = getApiUrl();
+      if (!apiUrl) {
+        openSettings();
+        return;
+      }
+
+      // 載入時於表格中呈現讀取動畫
+      var loadingHtml = '<tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div><span>連線至雲端試算表...</span></div></td></tr>';
+      document.getElementById('morningTable').innerHTML = loadingHtml;
+      document.getElementById('afternoonTable').innerHTML = loadingHtml;
+
+      fetch(apiUrl + '?action=getTodayAndTomorrowLists')
+        .then(res => res.json())
+        .then(res => {
+          if (res.status === 'success') {
+            fullDataStore = res.data;
+            populateDateSelector();
+            displaySelectedDate();
+          } else {
+            showToast('載入資料失敗: ' + res.message, 'error');
+          }
+        })
+        .catch(err => {
+          showToast('載入資料失敗，請確認 API 網址是否正確並已啟用所有人存取。', 'error');
+        });
+    }
+
+    function startAutoRefresh() {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(loadInitialData, 15000);
+    }
+
+    function stopAutoRefresh() {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    }
+
+    // ========== 日期選擇器 ==========
+    function populateDateSelector() {
+      var selector = document.getElementById('dateSelector');
+      var previouslySelected = selector.value;
+      selector.innerHTML = '';
+
+      var dates = Object.keys(fullDataStore).sort();
+      var todayStr = new Date().toISOString().slice(0, 10);
+
+      dates.forEach(function(dateStr) {
+        var option = document.createElement('option');
+        option.value = dateStr;
+        var label = (dateStr === todayStr) ? '今日' : '明日';
+        option.innerText = label + ' (' + dateStr + ')';
+        selector.appendChild(option);
+      });
+
+      if (previouslySelected && selector.querySelector('option[value="' + previouslySelected + '"]')) {
+        selector.value = previouslySelected;
+      }
+    }
+
+    // 將 YYYY-MM-DD 轉為中文字串 (含星期幾)
+    function displaySelectedDate() {
+      var selectedDate = document.getElementById('dateSelector').value;
+
+      if (selectedDate) {
+        var parts = selectedDate.split('-');
+        var date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        var weekday = date.toLocaleDateString('zh-TW', { weekday: 'long' });
+        document.getElementById('dateTitle').innerText = selectedDate + ' ' + weekday;
+      }
+
+      if (fullDataStore[selectedDate]) {
+        var data = fullDataStore[selectedDate];
+        syncTable('morningTable', data.morning || [], '上午', selectedDate);
+        syncTable('afternoonTable', data.afternoon || [], '下午', selectedDate);
+      }
+    }
+
+    // ========== 渲染點名表格 ==========
+    function syncTable(tableId, students, period, selectedDate) {
+      var table = document.getElementById(tableId);
+      var locationLabel = (period === '上午') ? '上車地點' : '下車地點';
+      table.innerHTML = '<tr><th>車次</th><th>' + locationLabel + '</th><th>班級</th><th>姓名</th><th>點名</th><th>備註</th><th>請假</th></tr>';
+
+      students.forEach(function(student) {
+        var key = student.className + '|' + student.name + '|' + period + '|' + selectedDate;
+
+        // 保留本地修改過的 check 狀態
+        var initialCheck = modifiedCheck[key] !== undefined ? modifiedCheck[key] : student.check;
+
+        var studentWithKey = {
+          shift: student.shift,
+          location: student.location,
+          className: student.className,
+          name: student.name,
+          key: key,
+          period: period,
+          check: initialCheck,
+          note: student.note || '',
+          isLeave: student.isLeave || false
+        };
+
+        localData[key] = studentWithKey;
+
+        var row = table.insertRow();
+
+        // 如果是請假狀態，整列加上 leave 樣式
+        if (studentWithKey.isLeave) {
+          row.className = 'row-leave';
+        }
+
+        row.insertCell(0).innerText = student.shift;
+        row.insertCell(1).innerText = student.location;
+        row.insertCell(2).innerHTML = '<strong>' + student.className + '</strong>';
+        row.insertCell(3).innerHTML = '<strong>' + student.name + '</strong>';
+
+        // 點名勾選
+        var checkCell = row.insertCell(4);
+        var checkLabel = document.createElement('span');
+        checkLabel.classList.add('checkbox-label');
+        checkLabel.classList.add(initialCheck ? 'checked' : 'unchecked');
+        checkLabel.innerText = initialCheck ? '✔️' : '❌';
+
+        (function(k, label, sName, sPeriod) {
+          label.onclick = function() {
+            var isCurrentlyChecked = label.innerText === '✔️';
+            var newStatus = !isCurrentlyChecked;
+            label.innerText = newStatus ? '✔️' : '❌';
+            label.className = 'checkbox-label ' + (newStatus ? 'checked' : 'unchecked');
+
+            modifiedCheck[k] = newStatus;
+            if (localData[k]) localData[k].check = newStatus;
+
+            updateAbsenceCounts();
+            updateCheck(sName, sPeriod, newStatus, selectedDate);
+          };
+        })(key, checkLabel, student.name, period);
+
+        checkCell.appendChild(checkLabel);
+
+        // 備註輸入
+        var noteCell = row.insertCell(5);
+        var noteInput = document.createElement('input');
+        noteInput.type = 'text';
+        noteInput.className = 'note-input' + (studentWithKey.isLeave ? ' leave-note' : '');
+        noteInput.id = 'note-' + key;
+        noteInput.value = studentWithKey.note;
+        if (studentWithKey.isLeave) {
+          noteInput.disabled = true;
+        }
+
+        (function(k, input, sName, sPeriod) {
+          input.onblur = function() {
+            var noteValue = input.value;
+            if (localData[k]) localData[k].note = noteValue;
+            
+            var apiUrl = getApiUrl();
+            if (!apiUrl) return;
+            var url = apiUrl + '?action=updateNote' +
+                      '&name=' + encodeURIComponent(sName) +
+                      '&note=' + encodeURIComponent(noteValue) +
+                      '&period=' + encodeURIComponent(sPeriod) +
+                      '&date=' + encodeURIComponent(selectedDate);
+            fetch(url)
+              .then(res => res.json())
+              .then(res => {
+                if (res.status !== 'success') {
+                  showToast('備註同步失敗', 'error');
+                }
+              })
+              .catch(err => {
+                showToast('備註同步失敗: ' + err.message, 'error');
+              });
+          };
+        })(key, noteInput, student.name, period);
+
+        noteCell.appendChild(noteInput);
+
+        // 請假開關
+        var leaveCell = row.insertCell(6);
+        var leaveWrapper = document.createElement('label');
+        leaveWrapper.className = 'leave-switch';
+        var leaveCheckbox = document.createElement('input');
+        leaveCheckbox.type = 'checkbox';
+        leaveCheckbox.checked = studentWithKey.isLeave;
+        var leaveSlider = document.createElement('span');
+        leaveSlider.className = 'leave-slider';
+
+        (function(k, checkbox, nInput, cLabel, sName, sPeriod, theRow) {
+          checkbox.onclick = function() {
+            stopAutoRefresh();
+            var isLeave = checkbox.checked;
+
+            if (isLeave) {
+              nInput.value = '今天請假不搭車';
+              nInput.disabled = true;
+              nInput.className = 'note-input leave-note';
+              if (localData[k]) {
+                localData[k].note = nInput.value;
+                localData[k].isLeave = true;
+              }
+              // 點名設為未到
+              cLabel.innerText = '❌';
+              cLabel.className = 'checkbox-label unchecked';
+              modifiedCheck[k] = false;
+              if (localData[k]) localData[k].check = false;
+              theRow.className = 'row-leave';
+            } else {
+              if (nInput.value === '今天請假不搭車') {
+                nInput.value = '';
+                if (localData[k]) localData[k].note = '';
+              }
+              nInput.disabled = false;
+              nInput.className = 'note-input';
+              if (localData[k]) localData[k].isLeave = false;
+              theRow.className = '';
+            }
+
+            updateAbsenceCounts();
+
+            var apiUrl = getApiUrl();
+            if (!apiUrl) return;
+            var url = apiUrl + '?action=updateLeaveStatus' +
+                      '&name=' + encodeURIComponent(sName) +
+                      '&period=' + encodeURIComponent(sPeriod) +
+                      '&isLeave=' + isLeave +
+                      '&date=' + encodeURIComponent(selectedDate);
+            fetch(url)
+              .then(res => res.json())
+              .then(res => {
+                if (res.status === 'success') {
+                  setTimeout(startAutoRefresh, 2000);
+                } else {
+                  showToast('請假狀態同步失敗', 'error');
+                  setTimeout(startAutoRefresh, 2000);
+                }
+              })
+              .catch(err => {
+                showToast('請假狀態同步失敗: ' + err.message, 'error');
+                setTimeout(startAutoRefresh, 2000);
+              });
+          };
+        })(key, leaveCheckbox, noteInput, checkLabel, student.name, period, row);
+
+        leaveWrapper.appendChild(leaveCheckbox);
+        leaveWrapper.appendChild(leaveSlider);
+        leaveCell.appendChild(leaveWrapper);
+      });
+
+      updateAbsenceCounts();
+    }
+
+    // ========== 後端同步 ==========
+    function updateCheck(name, period, checked, dateString) {
+      var apiUrl = getApiUrl();
+      if (!apiUrl) return;
+
+      var url = apiUrl + '?action=updateAttendance' +
+                '&name=' + encodeURIComponent(name) +
+                '&period=' + encodeURIComponent(period) +
+                '&checked=' + checked +
+                '&date=' + encodeURIComponent(dateString);
+
+      fetch(url)
+        .then(res => res.json())
+        .then(res => {
+          if (res.status !== 'success') {
+            showToast('同步失敗: ' + res.message, 'error');
+          }
+        })
+        .catch(err => {
+          showToast('同步失敗: ' + err.message, 'error');
+        });
+    }
+
+    // ========== 未搭車計數 ==========
+    function getAbsences(period) {
+      var selectedDate = document.getElementById('dateSelector').value;
+      if (!selectedDate) return [];
+      return Object.values(localData).filter(function(s) {
+        return s.period === period &&
+          s.key && s.key.endsWith(selectedDate) &&
+          !s.check &&
+          !(s.note && s.note.includes('不搭車'));
+      }).map(function(s) {
+        return s.className + ' ' + s.name;
+      });
+    }
+
+    function updateAbsenceCounts() {
+      var morningCount = getAbsences('上午').length;
+      var afternoonCount = getAbsences('下午').length;
+      document.getElementById('morningAbsenceCount').innerText = '未搭車: ' + morningCount + '人';
+      document.getElementById('afternoonAbsenceCount').innerText = '未搭車: ' + afternoonCount + '人';
+    }
+
+    // ========== 複製未搭車名單 ==========
+    function copyAbsences(period) {
+      var selectedDate = document.getElementById('dateSelector').value;
+      var absences = getAbsences(period);
+      var textToCopy = selectedDate + ' ' + period + '未搭車名單：\n';
+      if (absences.length === 0) {
+        textToCopy += '全員到齊 ✅';
+      } else {
+        textToCopy += absences.join('\n');
+      }
+      navigator.clipboard.writeText(textToCopy).then(function() {
+        showToast('已複製 ' + period + ' 未搭車名單', 'success');
+      }).catch(function() {
+        var ta = document.createElement('textarea');
+        ta.value = textToCopy;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('已複製 ' + period + ' 未搭車名單', 'success');
+      });
+    }
+
+    // ========== 一鍵全到 ==========
+    function markAllPresent(period) {
+      var selectedDate = document.getElementById('dateSelector').value;
+      if (!selectedDate) return;
+
+      var apiUrl = getApiUrl();
+      if (!apiUrl) return;
+
+      var promises = [];
+      Object.keys(localData).forEach(function(key) {
+        var s = localData[key];
+        if (s.period === period && key.endsWith(selectedDate) && !s.isLeave) {
+          s.check = true;
+          modifiedCheck[key] = true;
+
+          var url = apiUrl + '?action=updateAttendance' +
+                    '&name=' + encodeURIComponent(s.name) +
+                    '&period=' + encodeURIComponent(period) +
+                    '&checked=true' +
+                    '&date=' + encodeURIComponent(selectedDate);
+          promises.push(fetch(url));
+        }
+      });
+
+      Promise.all(promises)
+        .then(() => {
+          displaySelectedDate();
+          showToast(period + ' 已設為全數到齊', 'success');
+        })
+        .catch(err => {
+          showToast('一鍵全到同步失敗: ' + err.message, 'error');
+        });
+    }
+
+    // ========== 分頁切換 ==========
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+
+      document.querySelector('[data-tab="' + tabName + '"]').classList.add('active');
+      document.getElementById(tabName).classList.add('active');
+
+      if (tabName === 'tab-history') {
+        loadHistory();
+      }
+    }
+
+    // ========== 載入歷史紀錄 ==========
+    function loadHistory() {
+      var container = document.getElementById('historyContainer');
+      container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div><span>載入歷史紀錄中...</span></div>';
+
+      var apiUrl = getApiUrl();
+      if (!apiUrl) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>請先設定 API 網址</div></div>';
+        openSettings();
+        return;
+      }
+
+      fetch(apiUrl + '?action=getHistoryData')
+        .then(res => res.json())
+        .then(res => {
+          if (res.status === 'success') {
+            renderHistory(res.data);
+          } else {
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>載入失敗: ' + res.message + '</div></div>';
+          }
+        })
+        .catch(err => {
+          container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div>載入失敗: ' + err.message + '</div></div>';
+        });
+    }
+
+    function renderHistory(records) {
+      var container = document.getElementById('historyContainer');
+      container.innerHTML = '';
+
+      if (!records || records.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div>尚無歷史點名紀錄</div></div>';
+        return;
+      }
+
+      // 輔助：解析車次名稱中的數字（支援中文一二三及阿拉伯數字，支援雙位數）
+      var getBusNum = function(busStr) {
+        if (!busStr) return 999;
+        var m = busStr.match(/\d+/);
+        if (m) return parseInt(m[0], 10);
+        
+        var cnKeys = ['十', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+        if (busStr.indexOf('十一') !== -1) return 11;
+        if (busStr.indexOf('十二') !== -1) return 12;
+        if (busStr.indexOf('十三') !== -1) return 13;
+        if (busStr.indexOf('十四') !== -1) return 14;
+        if (busStr.indexOf('十五') !== -1) return 15;
+        
+        for (var i = 0; i < cnKeys.length; i++) {
+          if (busStr.indexOf(cnKeys[i]) !== -1) {
+            if (cnKeys[i] === '十') return 10;
+            return i;
+          }
+        }
+        return 999;
+      };
+
+      // 排序：先按日期（新到舊），同日按時段（上午先），同日同時段按車次（一二三順序）
+      records.sort(function(a, b) {
+        if (a.date !== b.date) return b.date.localeCompare(a.date);
+        if (a.session !== b.session) return a.session === '上午' ? -1 : 1;
+        return getBusNum(a.busNum) - getBusNum(b.busNum);
+      });
+
+      // 依日期分組
+      var groups = {};
+      var dateOrder = [];
+      records.forEach(function(r) {
+        if (!groups[r.date]) {
+          groups[r.date] = [];
+          dateOrder.push(r.date);
+        }
+        groups[r.date].push(r);
+      });
+
+      dateOrder.forEach(function(dateStr) {
+        var parts = dateStr.split('-');
+        var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        var weekdayStr = d.toLocaleDateString('zh-TW', { weekday: 'long' });
+
+        var groupDiv = document.createElement('div');
+        groupDiv.className = 'history-date-group';
+
+        var titleDiv = document.createElement('div');
+        titleDiv.className = 'history-date-title';
+        titleDiv.innerText = '📅 ' + dateStr + ' (' + weekdayStr + ')';
+        groupDiv.appendChild(titleDiv);
+
+        var grid = document.createElement('div');
+        grid.className = 'history-grid';
+
+        groups[dateStr].forEach(function(r) {
+          var total = r.students.length;
+          var presentList  = r.students.filter(function(s) { return s.check && !s.isLeave; });
+          var leaveList    = r.students.filter(function(s) { return s.isLeave; });
+          var absentList   = r.students.filter(function(s) { return !s.check && !s.isLeave; });
+          var present = presentList.length;
+          var leave   = leaveList.length;
+          var absent  = absentList.length;
+
+          var sessionClass = (r.session === '上午') ? 'morning' : 'afternoon';
+
+          var card = document.createElement('div');
+          card.className = 'history-card';
+          card.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+              '<span class="hc-badge ' + sessionClass + '">' + r.session + '</span>' +
+            '</div>' +
+            '<div class="hc-bus">' + r.busNum + '</div>' +
+            '<div class="hc-stats">' +
+              '應搭乘: <strong>' + total + '</strong> 人<br>' +
+              '已上車: <span class="green">' + present + '</span> 人<br>' +
+              '未上車: <span class="red">' + absent + '</span> 人<br>' +
+              '臨時請假: <span class="purple">' + leave + '</span> 人' +
+            '</div>' +
+            '<div class="hc-hint">點擊查看詳細名單 ▸</div>';
+
+          // 點擊卡片開啟詳細 Modal
+          (function(rec, pList, aList, lList, sc) {
+            card.onclick = function() {
+              showHistoryModal(rec, pList, aList, lList, sc);
+            };
+          })(r, presentList, absentList, leaveList, sessionClass);
+
+          grid.appendChild(card);
+        });
+
+        groupDiv.appendChild(grid);
+        container.appendChild(groupDiv);
+      });
+    }
+
+    // ========== 歷史詳細 Modal ==========
+    function showHistoryModal(r, presentList, absentList, leaveList, sessionClass) {
+      var existing = document.getElementById('historyModal');
+      if (existing) existing.remove();
+
+      var makeList = function(arr, cssClass, icon) {
+        if (arr.length === 0) return '<div class="hm-empty">（無）</div>';
+        return arr.map(function(s) {
+          var noteStr = s.note ? ' <span class="hm-note">' + s.note + '</span>' : '';
+          return '<div class="hm-item ' + cssClass + '">' + icon + ' <strong>' + s.className + '</strong> ' + s.name + noteStr + '</div>';
+        }).join('');
+      };
+
+      var modal = document.createElement('div');
+      modal.id = 'historyModal';
+      modal.className = 'hm-overlay';
+      modal.innerHTML =
+        '<div class="hm-box">' +
+          '<div class="hm-header">' +
+            '<div>' +
+              '<span class="hm-title">' + r.date + '</span>' +
+              '<span class="hc-badge ' + sessionClass + '" style="margin-left:8px;">' + r.session + '</span>' +
+              '<span class="hm-bus">' + r.busNum + '</span>' +
+            '</div>' +
+            '<button class="hm-close" onclick="document.getElementById(\'historyModal\').remove()">✕</button>' +
+          '</div>' +
+
+          '<div class="hm-section">' +
+            '<div class="hm-section-title green-title">✔ 已上車（' + presentList.length + '人）</div>' +
+            makeList(presentList, 'item-present', '✔') +
+          '</div>' +
+
+          '<div class="hm-section">' +
+            '<div class="hm-section-title red-title">✘ 未上車（' + absentList.length + '人）</div>' +
+            makeList(absentList, 'item-absent', '✘') +
+          '</div>' +
+
+          '<div class="hm-section">' +
+            '<div class="hm-section-title purple-title">📋 臨時請假（' + leaveList.length + '人）</div>' +
+            makeList(leaveList, 'item-leave', '📋') +
+          '</div>' +
+        '</div>';
+
+      modal.onclick = function(e) {
+        if (e.target === modal) modal.remove();
+      };
+
+      document.body.appendChild(modal);
+    }
+
+    // ========== API 設定 ==========
+    function openSettings() {
+      document.getElementById('apiUrlInput').value = getApiUrl();
+      document.getElementById('settingsModal').style.display = 'flex';
+    }
+    
+    function closeSettings() {
+      document.getElementById('settingsModal').style.display = 'none';
+    }
+    
+    function saveSettings() {
+      var val = document.getElementById('apiUrlInput').value.trim();
+      if (val === '') {
+        showToast('API 網址不可為空', 'error');
+        return;
+      }
+      if (val.indexOf('/edit') !== -1) {
+        showToast('警告：請貼上「發布網頁應用程式網址」，而非專案編輯器網址。', 'error');
+        return;
+      }
+      localStorage.setItem('school_bus_api_url', val);
+      closeSettings();
+      showToast('設定已儲存', 'success');
+      loadInitialData();
+      startAutoRefresh();
+    }
+
+    // ========== Toast 提示 ==========
+    function showToast(message, type) {
+      type = type || 'success';
+      var container = document.getElementById('toast-container');
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      var icon = type === 'success' ? '✅' : '❌';
+      toast.innerHTML = '<span>' + icon + '</span> <span>' + message + '</span>';
+      container.appendChild(toast);
+      setTimeout(function() {
+        toast.classList.add('fade-out');
+        toast.addEventListener('animationend', function() { toast.remove(); });
+      }, 3000);
+    }
+
+    // ========== 頁面載入 ==========
+    window.onload = function() {
+      if (!getApiUrl()) {
+        openSettings();
+      } else {
+        loadInitialData();
+        startAutoRefresh();
+      }
+    };
+  </script>
+</body>
+</html>
