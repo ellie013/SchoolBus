@@ -650,6 +650,7 @@
     var localData = {};
     var modifiedCheck = {};
     var autoRefreshTimer = null;
+    var isFirstLoad = true;
 
     // ========== API 網址讀取 ==========
     function getApiUrl() {
@@ -664,10 +665,12 @@
         return;
       }
 
-      // 載入時於表格中呈現讀取動畫
-      var loadingHtml = '<tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div><span>連線至雲端試算表...</span></div></td></tr>';
-      document.getElementById('morningTable').innerHTML = loadingHtml;
-      document.getElementById('afternoonTable').innerHTML = loadingHtml;
+      // 僅首次載入時顯示讀取動畫，後續自動刷新時靜默更新
+      if (isFirstLoad) {
+        var loadingHtml = '<tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div><span>連線至雲端試算表...</span></div></td></tr>';
+        document.getElementById('morningTable').innerHTML = loadingHtml;
+        document.getElementById('afternoonTable').innerHTML = loadingHtml;
+      }
 
       fetch(apiUrl + '?action=getTodayAndTomorrowLists')
         .then(res => res.json())
@@ -676,12 +679,13 @@
             fullDataStore = res.data;
             populateDateSelector();
             displaySelectedDate();
+            isFirstLoad = false;
           } else {
-            showToast('載入資料失敗: ' + res.message, 'error');
+            if (isFirstLoad) showToast('載入資料失敗: ' + res.message, 'error');
           }
         })
         .catch(err => {
-          showToast('載入資料失敗，請確認 API 網址是否正確並已啟用所有人存取。', 'error');
+          if (isFirstLoad) showToast('載入資料失敗，請確認 API 網址是否正確並已啟用所有人存取。', 'error');
         });
     }
 
@@ -983,26 +987,33 @@
       var apiUrl = getApiUrl();
       if (!apiUrl) return;
 
-      var promises = [];
+      // 先在本地立即更新 UI 狀態
+      var names = [];
       Object.keys(localData).forEach(function(key) {
         var s = localData[key];
         if (s.period === period && key.endsWith(selectedDate) && !s.isLeave) {
           s.check = true;
           modifiedCheck[key] = true;
-
-          var url = apiUrl + '?action=updateAttendance' +
-                    '&name=' + encodeURIComponent(s.name) +
-                    '&period=' + encodeURIComponent(period) +
-                    '&checked=true' +
-                    '&date=' + encodeURIComponent(selectedDate);
-          promises.push(fetch(url));
+          names.push(s.name);
         }
       });
 
-      Promise.all(promises)
-        .then(() => {
-          displaySelectedDate();
-          showToast(period + ' 已設為全數到齊', 'success');
+      // 立即更新畫面（不等後端回應）
+      displaySelectedDate();
+      showToast(period + ' 已設為全數到齊，同步中...', 'success');
+
+      // 使用單一批量 API 請求
+      var url = apiUrl + '?action=markAllPresent' +
+                '&period=' + encodeURIComponent(period) +
+                '&date=' + encodeURIComponent(selectedDate) +
+                '&names=' + encodeURIComponent(names.join(','));
+
+      fetch(url)
+        .then(res => res.json())
+        .then(res => {
+          if (res.status !== 'success') {
+            showToast('一鍵全到同步失敗: ' + res.message, 'error');
+          }
         })
         .catch(err => {
           showToast('一鍵全到同步失敗: ' + err.message, 'error');
