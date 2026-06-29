@@ -652,9 +652,13 @@
     var autoRefreshTimer = null;
     var isFirstLoad = true;
 
-    // ========== API 網址讀取 ==========
+    // ========== API 網址設定 ==========
+    // ★★★ 請將您的 GAS 網頁應用程式網址貼在下方引號內 ★★★
+    var API_URL = '';
+    // 範例： var API_URL = 'https://script.google.com/macros/s/AKfycbyV9rzE8JH9AUOGJX2mOSwZ0reqTYR8UIjN85arZQMJtatmx2OkUY5rpz_VMso-AnzL0g/exec';
+
     function getApiUrl() {
-      return localStorage.getItem('school_bus_api_url') || '';
+      return API_URL || localStorage.getItem('school_bus_api_url') || '';
     }
 
     // ========== 初始化載入 ==========
